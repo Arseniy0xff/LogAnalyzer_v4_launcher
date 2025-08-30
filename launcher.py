@@ -10,6 +10,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
+
 # ========== Files and paths ==========
 STATE_FILE = "launcher_state.json"
 if getattr(sys, "frozen", False):
@@ -20,6 +21,7 @@ else:
     WORKDIR = Path(__file__).parent.resolve()
 # ==================================
 
+
 def load_local_state():
     """Reads local config/state. If not, returns empty."""
     path = WORKDIR / STATE_FILE
@@ -27,10 +29,12 @@ def load_local_state():
         return json.loads(path.read_text(encoding="utf-8"))
     return {}
 
+
 def save_local_state(state: dict):
     """Saves local config/state."""
     path = WORKDIR / STATE_FILE
     path.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
 
 def load_json_from_url(url):
     try:
@@ -40,6 +44,7 @@ def load_json_from_url(url):
     except Exception as e:
         print(f"Loading error {url}: {e}")
         return None
+
 
 def download_with_progress(url, dst: Path):
     r = requests.get(url, stream=True, timeout=10)
@@ -51,6 +56,7 @@ def download_with_progress(url, dst: Path):
                 f.write(chunk)
                 bar.update(len(chunk))
 
+
 def merge_user_data(src: Path, dst: Path):
     if not src.exists():
         return
@@ -60,6 +66,7 @@ def merge_user_data(src: Path, dst: Path):
             shutil.copytree(item, target, dirs_exist_ok=True)
         else:
             shutil.copy2(item, target)
+
 
 def install_update(cfg: dict, state: dict, raw_base: str):
     zip_name = cfg["build_name"]
@@ -99,15 +106,36 @@ def install_update(cfg: dict, state: dict, raw_base: str):
     notes_url = f"https://arseniy0xff.github.io/LogAnalyzer_v4_builds/"
     webbrowser.open(notes_url)
 
+
 def launch_file(path: Path):
+    """
+    Opens a file in an associated application,
+    By installing CWD = folder where this file lies.
+    """
     if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise FileNotFoundError(f"Не найден файл: {path}")
+
+    cwd = str(path.parent)
+
     if sys.platform.startswith("win"):
-        os.startfile(str(path))
+        subprocess.Popen(
+            ['cmd', '/c', 'start', '', str(path)],
+            cwd=cwd,
+            shell=True
+        )
+
     elif sys.platform == "darwin":
-        subprocess.run(["open", str(path)], check=False)
+        subprocess.Popen(
+            ['open', str(path)],
+            cwd=cwd
+        )
+
     else:
-        subprocess.run(["xdg-open", str(path)], check=False)
+        subprocess.Popen(
+            ['xdg-open', str(path)],
+            cwd=cwd
+        )
+
 
 def main():
     state = load_local_state()
